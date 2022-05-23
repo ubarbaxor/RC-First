@@ -4,18 +4,45 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Potato</title>
+    <style>
+        #padUI {
+            display: none;
+        }
+        #padUI > * {
+            margin: 1em;
+        }
+        #padInfo {
+            width: 12em;
+        }
+    </style>
 </head>
 <body>
-    <div id="padSelection">Select controller:
-        <select name="gamepad"
-            id="gamepad-selector" onChange="selectPad(this.value)">
-        </select>
-    </div>
+    <header>
+        <div id="padSelection">
+            <label for="gamepad">Select controller:</label>
+            <select name="gamepad"
+                id="gamepad-selector" onChange="selectPad(this.value)">
+                <label for="gamepad">Select controller:</label>
+            </select>
+            <label for="precision">Input decimals:</label>
+            <input type="range"
+                id="precision" name="precision"
+                min="0" max="16" value="16"
+                onChange="setPrecision(this.value)">
+            </input>
+        </div>
+    </header>
     <div id="padUI">
-        <h3>Analogs:</h3>
-        <div id="pad-analogs"></div>
-        <h3>Buttons:</h3>
-        <div id="pad-buttons"></div>
+        <div id="padInfo">
+            <h3>Analogs:</h3>
+            <div id="pad-analogs"></div>
+            <h3>Buttons:</h3>
+            <div id="pad-buttons"></div>
+        </div>
+        <div id="bindingsUI">
+            <h3>Bindings: <button onclick="addBinding()">Add</button></h3>
+            <ul id="bindings-list"></ul>
+        </div>
     </div>
 </body>
 <script src="/socket.io/socket.io.js"></script>
