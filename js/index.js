@@ -14,6 +14,8 @@ app.use(express.static('public'))
 
 io.on('connection', socket => {
     console.log('User connected.')
+
+    socket.on('selectedPad', console.log)
 })
 
 server.listen(PORT, HOST, () => {
