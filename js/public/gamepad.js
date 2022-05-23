@@ -1,4 +1,5 @@
-const PAD_REFRESH_RATE = 100 // ~100Hz
+const PAD_REFRESH_RATE = 100 // ~X Hz
+// const PAD_REFRESH_STEP = 255 // [-1,1] mapped to [0,STEP]
 
 const gamepads = {};
 let currentPad
@@ -7,8 +8,43 @@ const padSelector = document.querySelector('#gamepad-selector')
 const nullOption = document.createElement('option')
 nullOption.innerText = 'None'
 
+let updateUI = pad => {
+    currentPad.ui.axes.forEach((axis, idx) => {
+        axis.innerText = `${idx}: ${pad.axes[idx]}`
+    })
+    currentPad.ui.keys.forEach((key, idx) => {
+        const button = pad.buttons[idx]
+        const value = button.value ? `${button.value}`
+            : button.pressed ? `P`
+            : button.touched ? `T`
+            : `O`
+        key.innerText = `${idx}: ${value}`
+    })
+}
 const refreshPad = _ => {
-    // TODO
+    const pads = navigator.getGamepads()
+
+    updateUI(pads[currentPad.index])
+}
+
+const initPadUI = gamepad => {
+    const analogs = document.querySelector('#pad-analogs')
+    const presses = document.querySelector('#pad-buttons')
+
+    gamepad.ui.axes = gamepad.axes.map((_, idx) => {
+        const elem = document.createElement('div')
+        elem.id = `axis-${idx}`
+        return elem
+    })
+    analogs.replaceChildren(...gamepad.ui.axes)
+
+    gamepad.ui.keys = gamepad.buttons.map((button, idx) => {
+        const elem = document.createElement('div')
+        elem.id = `button-${idx}`
+        button.HTMLElement = elem
+        return elem
+    })
+    presses.replaceChildren(...gamepad.ui.keys)
 }
 
 const getPadName = pad => `${pad.id
@@ -17,7 +53,7 @@ const getPadName = pad => `${pad.id
 }`
 
 const selectPad = padIndex => {
-    clearInterval(currentPad.refreshInterval)
+    currentPad && clearInterval(currentPad.refreshInterval)
     currentPad = gamepads[padIndex]
     console.log(`Select pad ${currentPad && currentPad.index}`)
 
@@ -30,6 +66,7 @@ const selectPad = padIndex => {
     socket.emit('selectedPad', payload)
 
     currentPad.refreshInterval = setInterval(refreshPad, 1000/PAD_REFRESH_RATE)
+    initPadUI(currentPad)
 }
 
 const updatePads = (event, connecting) => {
@@ -41,9 +78,11 @@ const updatePads = (event, connecting) => {
         const padOption = document.createElement('option')
         padOption.value = gamepad.index
         padOption.innerText = `${gamepad.index}: ${getPadName(gamepad)}`
-        gamepads[gamepad.index].HTMLElement = padOption
+        gamepads[gamepad.index].ui = {
+            selectOption: padOption
+        }
     } else {
-        gamepads[gamepad.index].HTMLElement.remove()
+        gamepads[gamepad.index].ui.padOption.remove()
         if (gamepad.index === currentPad.index) {
             // Current pad just disconnected
             clearInterval(currentPad.refreshInterval)
@@ -51,7 +90,7 @@ const updatePads = (event, connecting) => {
         }
         delete gamepads[gamepad.index]
     }
-    padOptions = Object.keys(gamepads).map(k => gamepads[k].HTMLElement)
+    padOptions = Object.keys(gamepads).map(k => gamepads[k].ui.selectOption)
     padSelector.replaceChildren(nullOption, ...padOptions)
     padSelector.value = currentPad && currentPad.index
 }

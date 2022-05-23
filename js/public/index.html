@@ -6,10 +6,16 @@
     <title>Potato</title>
 </head>
 <body>
-    <div>Select controller:
+    <div id="padSelection">Select controller:
         <select name="gamepad"
             id="gamepad-selector" onChange="selectPad(this.value)">
         </select>
+    </div>
+    <div id="padUI">
+        <h3>Analogs:</h3>
+        <div id="pad-analogs"></div>
+        <h3>Buttons:</h3>
+        <div id="pad-buttons"></div>
     </div>
 </body>
 <script src="/socket.io/socket.io.js"></script>
