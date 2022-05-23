@@ -1,0 +1,42 @@
+{
+  "name": "rc-first",
+  "version": "0.0.1",
+  "description": "JS stuff to connect controller to arduino",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ubarbaxor/RC-First.git"
+  },
+  "keywords": [
+    "Arduino",
+    "Micro",
+    "RC",
+    "Controller",
+    "2.4",
+    "GHz",
+    "NRF2401",
+    "Radio",
+    "MS19",
+    "Servo",
+    "ESC",
+    "brushless",
+    "BLDC"
+  ],
+  "author": "Xor a Barbu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ubarbaxor/RC-First/issues"
+  },
+  "homepage": "https://github.com/ubarbaxor/RC-First#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.16"
+  },
+  "dependencies": {
+    "express": "^4.18.1",
+    "socket.io": "^4.5.1"
+  }
+}

@@ -26,7 +26,7 @@ bool strimatch(const char *a, const char *b) {
 }
 
 // TODO: Maybe move that to header ?
-const char *modeNames[] = {"Transmitter", "Receiver"};
+const char *modeNames[] = { "Transmitter", "Receiver" };
 void set_mode(e_mode mode_target) {
     static e_mode mode_current = none;
 
