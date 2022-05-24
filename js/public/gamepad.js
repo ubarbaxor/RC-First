@@ -58,7 +58,7 @@ const refreshPad = _ => {
                 }] : acc
         }, [])
         const payload = [ ...axisUpdates, ...buttonUpdates ]
-        payload.length && console.log('Update payload:', payload)
+        payload.length && socket.emit('updates', payload)
         updateUI(updates)
     }
 }
