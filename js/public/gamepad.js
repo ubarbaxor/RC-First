@@ -1,3 +1,5 @@
+const shortest = (a, b) => a.length > b.length  ? a : b
+
 const PAD_REFRESH_RATE = 100 // ~X Hz
 // const PAD_REFRESH_STEP = 255 // [-1,1] mapped to [0,STEP]
 
@@ -13,55 +15,82 @@ const padSelector = document.querySelector('#gamepad-selector')
 const nullOption = document.createElement('option')
 nullOption.innerText = 'None'
 
-let updateUI = pad => {
-    currentPad.ui.axes.forEach((axis, idx) => {
-        formatted = `${idx}: ${pad.axes[idx].toFixed(precision)}`
-        if (formatted !== axis.innerText)
-            axis.innerText = formatted
+let updateUI = updates => {
+    updates.axes.forEach((update) => {
+        formatted = `${update.value.toFixed(precision)}`
+        currentPad.ui.axes[update.axis].innerText = formatted
     })
-    currentPad.ui.keys.forEach((key, idx) => {
-        const button = pad.buttons[idx]
-        const value = button.value ? `${button.value.toFixed(precision)}`
-            : button.pressed ? `P`
-            : button.touched ? `T`
-            : `O`
-        const formatted = `${idx}: ${value}`
-
-        if (formatted !== key.innerText)
-            key.innerText = formatted
+    updates.buttons.forEach(update => {
+        const formatted = `${update.value.toFixed(precision)}`
+        currentPad.ui.buttons[update.button].innerText = formatted
     })
 }
 const refreshPad = _ => {
     const pads = navigator.getGamepads()
 
-    updateUI(pads[currentPad.index])
+    const updates = {
+        axes: pads[currentPad.index].axes.reduce((acc, value, i) => [
+                ...acc,
+                value.toFixed(precision) !== currentPad.ui.axes[i].innerText
+                    && {axis: i, value}
+            ], []).filter(x => x),
+        buttons: pads[currentPad.index].buttons.reduce((acc, {value}, i) => [
+                ...acc,
+                value.toFixed(precision) !== currentPad.ui.buttons[i].innerText
+                    && {button: i, value}
+            ], []).filter(x => x)
+    }
+    if (updates.axes.length || updates.buttons.length) {
+        updates.axes.forEach(xu => {
+            if (bindings.axes[xu.axis]) {
+                console.log(xu)
+                const x = bindings.axes[xu.axis]
+                console.log(x)
+                console.log('>', x.action, xu.value) }
+        })
+        updates.buttons.forEach(bu => {
+            if (bindings.buttons[bu.button]) {
+                const b = bindings.buttons[bu.button]
+                console.log('>', b.action, bu.value) }
+        })
+        updateUI(updates)
+    }
 }
 
 const initPad = gamepad => {
-    const analogs = document.querySelector('#pad-analogs')
-    const presses = document.querySelector('#pad-buttons')
+    const axes = document.querySelector('#pad-analogs')
+    const buttons = document.querySelector('#pad-buttons')
 
     gamepad.ui.axes = gamepad.axes.map((_, idx) => {
-        const elem = document.createElement('div')
+        const elem = document.createElement('span')
         elem.id = `axis-${idx}`
+        elem.className = 'axis-data'
+        const parent = document.createElement('div')
+        parent.className = 'row'
+        parent.innerHTML = `${idx}: `
+        parent.appendChild(elem)
         return elem
     })
-    analogs.replaceChildren(...gamepad.ui.axes)
+    axes.replaceChildren(...gamepad.ui.axes.map(e => e.parentElement))
 
-    gamepad.ui.keys = gamepad.buttons.map((button, idx) => {
-        const elem = document.createElement('div')
+    gamepad.ui.buttons = gamepad.buttons.map((button, idx) => {
+        const elem = document.createElement('span')
         elem.id = `button-${idx}`
-        button.HTMLElement = elem
+        elem.className = 'button-data'
+        const parent = document.createElement('div')
+        parent.className = 'row'
+        parent.innerText = `${idx}: `
+        parent.appendChild(elem)
         return elem
     })
-    presses.replaceChildren(...gamepad.ui.keys)
+    buttons.replaceChildren(...gamepad.ui.buttons.map(e => e.parentElement))
 
     gamepad.refreshInterval = setInterval(refreshPad, 1000/PAD_REFRESH_RATE)
 }
 const clearPad = pad => {
     clearInterval(pad.refreshInterval)
     pad.ui.axes.forEach(elem => elem.remove())
-    pad.ui.keys.forEach(elem => elem.remove())
+    pad.ui.buttons.forEach(elem => elem.remove())
 }
 
 const getPadName = pad => `${pad.id

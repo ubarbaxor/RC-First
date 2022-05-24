@@ -3,45 +3,71 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potato</title>
+    <title>Controller First</title>
     <style>
-        #padUI {
-            display: none;
+        .axis-data, .button-data {
+            display: flex;
+            align-self: flex-end;
+            right: 0;
         }
-        #padUI > * {
+        .bindingControl > * {
             margin: 1em;
         }
-        #padInfo {
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+        .row {
+            display: flex;
+            flex-direction: row;
+        }
+        .margin-m {
+            margin: 1em;
+        }
+        .padding-m {
+            padding: 1em;
+        }
+        .margin-s {
+            margin: 0.25em;
+        }
+        .width-m {
             width: 12em;
+        }
+        .width-s {
+            width: 4em;
+        }
+        #padUI {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div id="padSelection">
+    <header class="row">
+        <div class="column padding-m">
             <label for="gamepad">Select controller:</label>
+            <label for="precision">Input decimals:</label>
+        </div>
+        <div class="column padding-m">
             <select name="gamepad"
                 id="gamepad-selector" onChange="selectPad(this.value)">
-                <label for="gamepad">Select controller:</label>
             </select>
-            <label for="precision">Input decimals:</label>
             <input type="range"
                 id="precision" name="precision"
                 min="0" max="16" value="16"
-                onChange="setPrecision(this.value)">
+                oninput="setPrecision(this.value)">
             </input>
         </div>
     </header>
     <div id="padUI">
-        <div id="padInfo">
+        <div class="width-m margin-m">
             <h3>Analogs:</h3>
             <div id="pad-analogs"></div>
             <h3>Buttons:</h3>
             <div id="pad-buttons"></div>
         </div>
-        <div id="bindingsUI">
+        <div class="width-m margin-m">
             <h3>Bindings: <button onclick="addBinding()">Add</button></h3>
-            <ul id="bindings-list"></ul>
+            <div id="bindings-list"></div>
         </div>
     </div>
 </body>
@@ -50,4 +76,5 @@
   var socket = io();
 </script>
 <script src="gamepad.js"></script>
+<script src="bindings.js"></script>
 </html>
