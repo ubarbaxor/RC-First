@@ -10,10 +10,12 @@ const setPrecision = value => {
 
 const gamepads = {}
 let currentPad
+let lastPad
 
 const padSelector = document.querySelector('#gamepad-selector')
-const nullOption = document.createElement('option')
-nullOption.innerText = 'None'
+const nullPad = document.createElement('option')
+nullPad.innerText = 'None'
+nullPad.value = ''
 
 let updateUI = updates => {
     updates.axes.forEach((update) => {
@@ -58,7 +60,7 @@ const refreshPad = _ => {
                 }] : acc
         }, [])
         const payload = [ ...axisUpdates, ...buttonUpdates ]
-        payload.length && socket.emit('updates', payload)
+        payload.length && socket.emit('padUpdates', payload)
         updateUI(updates)
     }
 }
@@ -120,29 +122,37 @@ const selectPad = padIndex => {
 }
 
 const updatePads = (event, connecting) => {
-    var gamepad = event.gamepad
+    const gamepad = event.gamepad
     console.log(gamepad)
 
     if (connecting) {
         gamepads[gamepad.index] = gamepad;
-        const padOption = document.createElement('option')
-        padOption.value = gamepad.index
-        padOption.innerText = `${gamepad.index}: ${getPadName(gamepad)}`
-        gamepads[gamepad.index].ui = {
-            selectOption: padOption
-        }
+        const option = document.createElement('option')
+        option.value = gamepad.index
+        option.innerText = `${gamepad.index}: ${getPadName(gamepad)}`
+        gamepads[gamepad.index].ui = { padOption: option }
+        lastPad && !currentPad
+            && gamepad.id === lastPad.id && gamepad.index === lastPad.index
+            && selectPad(gamepad.index)
     } else {
         gamepads[gamepad.index].ui.padOption.remove()
         if (gamepad.index === currentPad.index) {
             // Current pad just disconnected
             clearInterval(currentPad.refreshInterval)
-            alert('Warning ! Current pad disconnected.')
+            padSelector.value = ''
+            alert('Current pad disconnected !')
+            lastPad = currentPad
+            currentPad = null
         }
         delete gamepads[gamepad.index]
     }
-    padOptions = Object.keys(gamepads).map(k => gamepads[k].ui.selectOption)
-    padSelector.replaceChildren(nullOption, ...padOptions)
-    padSelector.value = currentPad && currentPad.index
+    // padOptions = Object.keys(gamepads).map(k => gamepads[k].ui.padOption)
+    padOptions = Object.values(gamepads).map(({ ui }) => ui.padOption)
+    padSelector.replaceChildren(nullPad, ...padOptions)
+    if (currentPad)
+        padSelector.value = currentPad.index
+    else
+        padSelector.value = ''
 }
 
 window.addEventListener("gamepadconnected", e => {

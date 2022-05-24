@@ -17,6 +17,10 @@
             display: flex;
             flex-direction: column;
         }
+        .headerControls > * {
+            width: 8em;
+            margin: 0.25em 0.5em;
+        }
         .row {
             display: flex;
             flex-direction: row;
@@ -48,15 +52,23 @@
     </style>
 </head>
 <body>
-    <header class="row">
-        <div class="column padding-m">
-            <label for="gamepad">Select controller:</label>
-            <label for="precision">Input decimals:</label>
+    <header>
+        <div class="headerControls row">
+            <label for="serial">Serial port:</label>
+            <select name="serial"
+                id="serial-selector" onChange="selectPort(this.value)">
+                <option value="">None</option>
+            </select>
+            <div><button onclick="queryPorts()">Refresh</button></div>
         </div>
-        <div class="column padding-m">
+        <div class="headerControls row">
+            <label for="gamepad">Select controller:</label>
             <select name="gamepad"
                 id="gamepad-selector" onChange="selectPad(this.value)">
             </select>
+        </div>
+        <div class="headerControls row">
+            <label for="precision">Input decimals:</label>
             <input type="range"
                 id="precision" name="precision"
                 min="0" max="16" value="16"
@@ -83,4 +95,5 @@
 </script>
 <script src="gamepad.js"></script>
 <script src="bindings.js"></script>
+<script src="serial.js"></script>
 </html>
