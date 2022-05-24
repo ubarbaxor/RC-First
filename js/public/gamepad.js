@@ -29,30 +29,36 @@ const refreshPad = _ => {
     const pads = navigator.getGamepads()
 
     const updates = {
-        axes: pads[currentPad.index].axes.reduce((acc, value, i) => [
-                ...acc,
-                value.toFixed(precision) !== currentPad.ui.axes[i].innerText
-                    && {axis: i, value}
-            ], []).filter(x => x),
-        buttons: pads[currentPad.index].buttons.reduce((acc, {value}, i) => [
-                ...acc,
-                value.toFixed(precision) !== currentPad.ui.buttons[i].innerText
-                    && {button: i, value}
-            ], []).filter(x => x)
+        axes: pads[currentPad.index].axes
+            .reduce((acc, value, i) => value.toFixed(precision)
+                !== currentPad.ui.axes[i].innerText
+                ? [ ...acc, {axis: i, value} ]
+                : acc, []),
+        buttons: pads[currentPad.index].buttons
+            .reduce((acc, {value}, i) => value.toFixed(precision)
+                !== currentPad.ui.buttons[i].innerText
+                ? [ ...acc, {button: i, value} ]
+                : acc, [])
     }
     if (updates.axes.length || updates.buttons.length) {
-        updates.axes.forEach(xu => {
-            if (bindings.axes[xu.axis]) {
-                console.log(xu)
-                const x = bindings.axes[xu.axis]
-                console.log(x)
-                console.log('>', x.action, xu.value) }
-        })
-        updates.buttons.forEach(bu => {
-            if (bindings.buttons[bu.button]) {
-                const b = bindings.buttons[bu.button]
-                console.log('>', b.action, bu.value) }
-        })
+        const buttonUpdates = updates.buttons.reduce((acc, update) => {
+            const binding = bindings.buttons[update.button]
+            return binding && binding.action
+                ? [...acc, {
+                    action: binding.action,
+                    value: !binding.invert ? update.value : -update.value
+                }] : acc
+        }, [])
+        const axisUpdates = updates.axes.reduce((acc, update) => {
+            const binding = bindings.axes[update.axis]
+            return binding && binding.action
+                ? [...acc, {
+                    action: binding.action,
+                    value: !binding.invert ? update.value : -update.value
+                }] : acc
+        }, [])
+        const payload = [ ...axisUpdates, ...buttonUpdates ]
+        payload.length && console.log('Update payload:', payload)
         updateUI(updates)
     }
 }
@@ -61,28 +67,23 @@ const initPad = gamepad => {
     const axes = document.querySelector('#pad-analogs')
     const buttons = document.querySelector('#pad-buttons')
 
-    gamepad.ui.axes = gamepad.axes.map((_, idx) => {
-        const elem = document.createElement('span')
-        elem.id = `axis-${idx}`
-        elem.className = 'axis-data'
-        const parent = document.createElement('div')
-        parent.className = 'row'
-        parent.innerHTML = `${idx}: `
-        parent.appendChild(elem)
-        return elem
+    const mapInputs = (inputs, type) => inputs.map((_, idx) => {
+        const data = document.createElement('span')
+        data.id = `${type}-${idx}`
+        data.className = `${type}-data`
+        const index = document.createElement('span')
+        index.className = 'width-xxs'
+        index.innerText = `${idx}:`
+        const row = document.createElement('div')
+        row.className = 'row'
+        row.appendChild(index)
+        row.appendChild(data)
+        return data
     })
+    gamepad.ui.axes = mapInputs(gamepad.axes, 'axis')
     axes.replaceChildren(...gamepad.ui.axes.map(e => e.parentElement))
 
-    gamepad.ui.buttons = gamepad.buttons.map((button, idx) => {
-        const elem = document.createElement('span')
-        elem.id = `button-${idx}`
-        elem.className = 'button-data'
-        const parent = document.createElement('div')
-        parent.className = 'row'
-        parent.innerText = `${idx}: `
-        parent.appendChild(elem)
-        return elem
-    })
+    gamepad.ui.buttons = mapInputs(gamepad.buttons, 'button')
     buttons.replaceChildren(...gamepad.ui.buttons.map(e => e.parentElement))
 
     gamepad.refreshInterval = setInterval(refreshPad, 1000/PAD_REFRESH_RATE)
