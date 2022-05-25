@@ -106,7 +106,7 @@ void setup()
     pinMode(LED_RX, OUTPUT);
 
     Serial.begin(SERIAL_BAUDRATE);
-    Serial.setTimeout(1); // Set RW timeout to 1ms
+    Serial.setTimeout(2); // Set RW timeout to 1ms
 
     Serial.println("Initialize radio...");
     if (radio.begin()) { // Great Success
@@ -117,6 +117,7 @@ void setup()
 
     // Throttle to pin A0
     throttle.attach(A0);
+    throttle.write(0);
 }
 
 unsigned long lastTick = millis();
