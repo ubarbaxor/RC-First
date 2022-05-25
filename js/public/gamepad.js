@@ -1,6 +1,6 @@
 const shortest = (a, b) => a.length > b.length  ? a : b
 
-const PAD_REFRESH_RATE = 100 // ~X Hz
+const PAD_REFRESH_RATE = 50 // ~X Hz
 // const PAD_REFRESH_STEP = 255 // [-1,1] mapped to [0,STEP]
 
 let precision = 16

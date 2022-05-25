@@ -3,6 +3,11 @@ const { SerialPort } = require('serialport')
 const app = express()
 
 const http = require('http')
+const readline = require('readline')
+const rl = readline.createInterface({
+  input: process.stdin
+})
+
 const server = http.createServer(app)
 
 const { Server } = require("socket.io")
@@ -18,17 +23,12 @@ const ports = {}
 const updateHandlers = {
   throttle: ({ value }, {id}) => {
     if (!ports[id]) { return }
-    // Value can be -1 to 1
-    // We want it on 0-255
-    // Scale linear
     let throttle
 
-    if (value > 0) {
-      throttle = Math.round(255 * value)
-      ports[id].serial.write(`M A 0 ${throttle}\n`)// Axis Zero Value
-    } else {
-      // Not implemented
-    }
+    throttle = Math.round(255 * value)
+    const msg = `M ${value > 0 ? "A" : "a"} 0 ${throttle}`
+    // console.log(msg)
+    ports[id].serial.write(`${msg}`)
   }
 }
 io.on('connection', socket => {
@@ -56,17 +56,19 @@ io.on('connection', socket => {
 
     // Todo : mult socks / ports ?
     if (!ports[socket.id]) {
-      const serial = new SerialPort({ path, baudRate: BAUDRATE })
-      ports[socket.id] = {
-        path,
-        serial,
-        socket: socket.id,
-      }
-      socket.emit('portSelected', path)
-      serial.pipe(process.stdout)
-      serial.on('ready', _ => {
-        console.log('POTATO')
+      const serial = new SerialPort({ path, baudRate: BAUDRATE }, _ => {
         serial.write('tx')
+        rl.on('line', input => {
+          console.log(`User input: [${input}]`)
+          serial.write(input)
+        })
+        ports[socket.id] = {
+          path,
+          serial,
+          socket: socket.id,
+        }
+        socket.emit('portSelected', path)
+        serial.pipe(process.stdout)
       })
     } else if (ports[socket.id] && ports[socket.id].path === path) {
       socket.emit('portRecover', path)
@@ -74,8 +76,13 @@ io.on('connection', socket => {
   })
 
   socket.on('padUpdates', updates => {
-    updates.forEach(u => updateHandlers[u.action]
-      && updateHandlers[u.action.toLowerCase()](u, socket))
+    updates.forEach(u => {
+      const actionHandler = updateHandlers[u.action.toLowerCase()]
+
+      actionHandler
+        ? actionHandler(u, socket)
+        : console.log(`Action not implemented: ${u.action}`)
+    })
   })
 
 })

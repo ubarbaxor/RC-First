@@ -6,6 +6,13 @@
 #include <RF24.h>
 #include <printf.h>
 
+#include <Servo.h>
+
+#define USE_PRINTF false
+
+// ESC's use Servo-like PWM for control
+Servo throttle;
+
 // Serial console input / read buffer
 char input_buff[INPUT_BUFF_SIZE];
 
@@ -34,7 +41,7 @@ void set_mode(e_mode mode_target) {
         Serial.println("Already in requested mode.");
         return;
     }
-    printf("Switch to %s mode...\n", modeNames[mode_target]);
+    Serial.write("Switch to "); Serial.write(modeNames[mode_target]); Serial.println("mode...");
 
     switch (mode_target)
     {
@@ -58,42 +65,42 @@ void set_mode(e_mode mode_target) {
 
 void process_input(char input[], size_t length) {
     // Echo
-    Serial.print("Serial get: "); Serial.println(input);
+    Serial.write("Serial get: ["); Serial.write(input); Serial.println("]");
 
     // Check for RX / TX instruction
-    if (strimatch(input, "T")
-    || strimatch(input, "tx")
-    || strimatch(input, "transmit")
-    || strimatch(input, "send")) {
+    if (strimatch(input, "tx") || strimatch(input, "transmit")) {
         set_mode(mode_tx);
         return ;
     }
-    else if (strimatch(input, "R") || strimatch(input, "rx") || strimatch(input, "receive") || strimatch(input, "recv")) {
+    else if (strimatch(input, "rx") || strimatch(input, "receive")) {
         set_mode(mode_rx);
         return ;
     }
-    if (strimatch(input, "radio")
-    || strimatch(input, "status")) {
+    // Dump radio status
+    if (strimatch(input, "radio") || strimatch(input, "status")) {
         radio.printPrettyDetails();
-        printf("Initialized: %s\n", radio_initialized ? "true" : "false");
+        if (USE_PRINTF) { printf("Initialized: %s\n", radio_initialized ? "true" : "false"); }
         return ;
     }
-    if (transmitter
-    && (!memcmp(input, "M ", sizeof(char) * 2)
-    || !memcmp(input, "m ", sizeof(char) * 2))) {
-        if (strlen(input) > 2) {
-            printf("Sending payload: [%s] (%d bytes)\n", input + 2, strlen(input + 2));
-            radio.write(input + 2, sizeof(char) * strlen(input + 2));
+    // Tx specific commands (message sending)
+    if (transmitter) {
+        if (!memcmp(input, "M ", sizeof(char) * 2)
+        || !memcmp(input, "m ", sizeof(char) * 2)) {
+            if (strlen(input) > 2) {
+                if (USE_PRINTF) { printf("Sending payload: [%s] (%d bytes)\n", input + 2, strlen(input + 2)); }
+                radio.write(input + 2, sizeof(char) * strlen(input + 2));
+            } else { Serial.println("No message payload."); }
+            return ;
         }
-        return ;
     }
 
     Serial.println("Unrecognized input.");
+    memset(input_buff, 0, INPUT_BUFF_SIZE);
 }
 
 void setup()
 {
-    printf_begin();
+    if (USE_PRINTF) { printf_begin(); }
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(LED_TX, OUTPUT);
     pinMode(LED_RX, OUTPUT);
@@ -107,9 +114,11 @@ void setup()
         set_mode(mode_rx); // Init to RX by default
         Serial.println("Radio init OK");
     }
+
+    // Throttle to pin A0
+    throttle.attach(A0);
 }
 
-size_t read_size = 0;
 unsigned long lastTick = millis();
 bool blink_tx = true;
 void loop()
@@ -126,25 +135,48 @@ void loop()
 
     if (Serial.available() > 0) {
         // Get some bytes, max read = filling input buff
-        read_size = Serial.readBytesUntil('\n', input_buff, INPUT_BUFF_SIZE);
-        size_t string_size = read_size;
+        size_t read_size = Serial
+            .readBytesUntil('\n', input_buff, INPUT_BUFF_SIZE);
 
         // A bit of cleaning up -- remove line terminators, null term input
-        if (input_buff[read_size - 2] == '\r') {
-            input_buff[read_size - 2] = 0; // Null-term instead of CR/NL
-            string_size -= 2;
-        } else if (input_buff[read_size - 1] == '\n') {
-            input_buff[read_size - 1] = 0; // Null-term instead of NL
-            string_size -= 1;
-        } else if (read_size < INPUT_BUFF_SIZE) {
+        if (input_buff[read_size - 1] == '\n') {
+            Serial.println("Unix style EOL");
+            input_buff[read_size - 1] = '\0'; // Null-term instead of NL
+            read_size -= 1;
+        }
+        if (input_buff[read_size - 1] == '\r') {
+            Serial.println("Windows style EOL");
+            input_buff[read_size] = '\0'; // Null-term instead of CR/NL
+            read_size -= 1;
+        }
+        if (read_size < INPUT_BUFF_SIZE) {
             input_buff[read_size] = '\0'; // Make sure input is null terminated if can be
         }
 
-        process_input(input_buff, string_size);
+        process_input(input_buff, read_size);
     }
     if (!transmitter && radio.available()) {
         radio.read(rx_buff, PAYLOAD_SIZE);
-        Serial.println((char *)rx_buff);
+        if (USE_PRINTF) { printf("Got radio: [%s]\n", rx_buff); }
+        char *tok = strtok((char *)rx_buff, " ");
+        if (strimatch(tok, "A")) { // Axis
+            tok = strtok(NULL, " ");
+            if (strimatch(tok, "0")) { // 0 = throttle
+                tok = strtok(NULL, " ");
+                int intVal = atoi(tok);
+                if (intVal == 0 && !strimatch(tok, "0")) {
+                        // printf("Error parsing %s (invalid number)", tok);
+                } else if (intVal >= 0 && intVal < 256) {
+                    // TODO: Accept negative values ?
+                    byte value = map(intVal, 0, 256, 0, 180);
+                    throttle.write(value);
+                    Serial.write("Throttle: "); Serial.println(value);
+                } else { if (USE_PRINTF)
+                    printf("Value %d out of bounds (0-255)\n", intVal); }
+            } else { if (USE_PRINTF) { printf("Axis %s not implemented.\n", tok); } }
+        } else {
+            if (USE_PRINTF) { printf("Unknown radio command: [%s]\n", tok); }
+        }
         memset(rx_buff, 0, PAYLOAD_SIZE);
     }
 }
