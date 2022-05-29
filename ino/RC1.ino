@@ -8,7 +8,7 @@
 
 #include <Servo.h>
 
-#define USE_PRINTF false
+#define USE_PRINTF true
 
 // ESC's use Servo-like PWM for control
 Servo throttle;
@@ -64,8 +64,6 @@ void set_mode(e_mode mode_target) {
 }
 
 void process_input(char input[], size_t length) {
-    // Echo
-    Serial.write("Serial get: ["); Serial.write(input); Serial.println("]");
 
     // Check for RX / TX instruction
     if (strimatch(input, "tx") || strimatch(input, "transmit")) {
@@ -78,8 +76,11 @@ void process_input(char input[], size_t length) {
     }
     // Dump radio status
     if (strimatch(input, "radio") || strimatch(input, "status")) {
-        radio.printPrettyDetails();
-        if (USE_PRINTF) { printf("Initialized: %s\n", radio_initialized ? "true" : "false"); }
+        if (USE_PRINTF) {
+            radio.printPrettyDetails();
+        }
+        Serial.print("Initialized: ");
+        Serial.println(radio_initialized ? "true" : "false");
         return ;
     }
     // Tx specific commands (message sending)
@@ -106,7 +107,7 @@ void setup()
     pinMode(LED_RX, OUTPUT);
 
     Serial.begin(SERIAL_BAUDRATE);
-    Serial.setTimeout(2); // Set RW timeout to 1ms
+    Serial.setTimeout(SERIAL_TIMEOUT); // Set RW timeout to 1ms
 
     Serial.println("Initialize radio...");
     if (radio.begin()) { // Great Success
@@ -116,7 +117,7 @@ void setup()
     }
 
     // Throttle to pin A0
-    throttle.attach(A0);
+    throttle.attach(A0, 1000, 2000); // 1000 uSec = 1ms, 0 throttle. 2000 = max.
     throttle.write(0);
 }
 
@@ -137,7 +138,7 @@ void loop()
     if (Serial.available() > 0) {
         // Get some bytes, max read = filling input buff
         size_t read_size = Serial
-            .readBytesUntil('\n', input_buff, INPUT_BUFF_SIZE);
+            .readBytesUntil(';', input_buff, INPUT_BUFF_SIZE);
 
         // A bit of cleaning up -- remove line terminators, null term input
         if (input_buff[read_size - 1] == '\n') {
@@ -153,6 +154,8 @@ void loop()
         if (read_size < INPUT_BUFF_SIZE) {
             input_buff[read_size] = '\0'; // Make sure input is null terminated if can be
         }
+        // Echo
+        Serial.write("Serial get: ["); Serial.write(input_buff, read_size); Serial.println("]");
 
         process_input(input_buff, read_size);
     }

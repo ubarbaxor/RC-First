@@ -1,11 +1,11 @@
 {
   "name": "rc-first",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "JS stuff to connect controller to arduino",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon"
+    "dev": "nodemon -e js,ino --watch . --watch ../ino"
   },
   "repository": {
     "type": "git",

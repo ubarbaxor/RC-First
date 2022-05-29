@@ -11,6 +11,7 @@ const rl = readline.createInterface({
 const server = http.createServer(app)
 
 const { Server } = require("socket.io")
+const { SocketAddress } = require('net')
 const io = new Server(server)
 
 const PORT = 8000
@@ -26,56 +27,101 @@ const updateHandlers = {
     let throttle
 
     throttle = Math.round(255 * value)
-    const msg = `M ${value > 0 ? "A" : "a"} 0 ${throttle}`
+    const msg = `M ${value > 0 ? "A" : "a"} 0 ${throttle};`
     // console.log(msg)
     ports[id].serial.write(`${msg}`)
   }
 }
 io.on('connection', socket => {
+  const listPorts = _ => {
+    console.log(`Send ports to ${socket.id}`)
+    SerialPort.list()
+      .then(serialPorts => socket.emit('serialPorts', serialPorts))
+  }
+
   console.log(`Socket ${socket.id} connected.`)
+  listPorts()
+
 
   // socket.onAny(console.log)
 
   socket.on('disconnect', reason => {
     console.log(`Socket ${socket.id} disconnected (${reason})`)
-    if (ports[socket.id]) {
+     if (ports[socket.id]) {
+
+     }
+    const sharingIDs = Object.keys(ports).filter(id => {
+      if (id === socket.id) { return }
+
+      if (ports[id].path === path) {
+        console.log(`Socket ${socket.id} shares ${path} with ${id}`)
+        return true
+      }
+    })
+    if (ports[socket.id] && !sharingIDs.length) {
       console.log(`Cleanup port ${ports[socket.id].serial.settings.path}`)
       ports[socket.id].serial.write('rx') // We're disconnecting, no more tx
-      delete ports[socket.id].serial
-      delete ports[socket.id]
+      ports[socket.id].serial.close()
     }
+    delete ports[socket.id]
   })
 
-  socket.on('listPorts', _ => {
-    SerialPort.list()
-      .then(serialPorts => socket.emit('serialPorts', serialPorts))
-  })
+  socket.on('listPorts', listPorts)
 
   socket.on('selectPort', path => {
-    if (!path) { return }
+    if (!path) {
+      if (ports[socket.id]) {
+        const sharingIDs = Object.keys(ports).filter(id => {
+          if (ports[id].path === path && id !== socket.id) {
+            console.log(ports[id])
+            return true
+          }
+        })
+        if (!sharingIDs.length)  {
+          console.log(`Port ${ports[socket.id].serial.path} is now free.`)
+          ports[socket.id].serial.close()
+        }
+        delete(ports[socket.id])
+        return
+      }
+    }
+    console.log(`Port selected: ${path}`)
 
     // Todo : mult socks / ports ?
     if (!ports[socket.id]) {
-      const serial = new SerialPort({ path, baudRate: BAUDRATE }, _ => {
-        serial.write('tx')
-        rl.on('line', input => {
-          console.log(`User input: [${input}]`)
-          serial.write(input)
-        })
-        ports[socket.id] = {
-          path,
-          serial,
-          socket: socket.id,
+      const sharingIDs = Object.keys(ports).filter(id => {
+        if (ports[id].path === path && id !== socket.id) {
+          console.log(`${ports[id].path} shared with ${id}`)
+          return true
         }
+      })
+      const serial = sharingIDs.length
+        ? sharingIDs[0].serial
+        : new SerialPort({ path, baudRate: BAUDRATE }, _ => {
+          serial.write('tx')
+          rl.on('line', input => {
+            console.log(`User input: [${input}]`)
+            serial.write(input)
+          })
+      })
+      ports[socket.id] = {
+        path,
+        serial,
+        socket: socket.id,
+      }
+      if (sharingIDs.length) {
+        socket.emit('portResume', path)
+      } else {
         socket.emit('portSelected', path)
         serial.pipe(process.stdout)
-      })
+      }
     } else if (ports[socket.id] && ports[socket.id].path === path) {
-      socket.emit('portRecover', path)
+      socket.emit('portResume', path)
     }
   })
 
   socket.on('padUpdates', updates => {
+    console.log('padUpdates: ', updates)
     updates.forEach(u => {
       const actionHandler = updateHandlers[u.action.toLowerCase()]
 

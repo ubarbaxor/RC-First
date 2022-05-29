@@ -52,6 +52,9 @@
         .width-xxs {
             width: 2em;
         }
+        #bindings-header {
+            display: flex;
+        }
         #padUI {
             display: none;
         }
@@ -90,7 +93,12 @@
             <div id="pad-buttons"></div>
         </div>
         <div class="width-m margin-m">
-            <h3>Bindings: <button onclick="addBinding()">Add</button></h3>
+            <h3 id="bindings-header">Bindings:
+                <button onclick="addBinding()">[+] Add</button>
+                <button onclick="loadBindings()">[<] Load</button>
+                <button onclick="persistBindings()">[>] Save</button>
+                <button onclick="clearBindings()">[x] Clear</button>
+            </h3>
             <div id="bindings-list"></div>
         </div>
     </div>
@@ -100,7 +108,7 @@
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  var socket = io();
+  const socket = io();
 </script>
 <script src="gamepad.js"></script>
 <script src="bindings.js"></script>
