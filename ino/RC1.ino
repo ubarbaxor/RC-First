@@ -2,8 +2,8 @@
 
 // RF comm stuff
 #include <SPI.h>
-#include <nRF24L01.h>
 #include <RF24.h>
+// #include <nRF24L01.h>
 #include <printf.h>
 
 #include <Servo.h>
@@ -41,13 +41,13 @@ void set_mode(e_mode mode_target) {
         Serial.println("Already in requested mode.");
         return;
     }
-    Serial.write("Switch to "); Serial.write(modeNames[mode_target]); Serial.println("mode...");
+    Serial.write("Switch to "); Serial.write(modeNames[mode_target]); Serial.println(" mode...");
 
     switch (mode_target)
     {
     case mode_tx:
         radio.stopListening();
-        radio.closeReadingPipe(0);// Is this close necessary ?
+        radio.closeReadingPipe(0);
         radio.openWritingPipe(address);
         transmitter = true;
         break;
@@ -81,6 +81,7 @@ void process_input(char input[], size_t length) {
         }
         Serial.print("Initialized: ");
         Serial.println(radio_initialized ? "true" : "false");
+        Serial.print("Role: "); Serial.println(transmitter ? "TX" : "RX");
         return ;
     }
     // Tx specific commands (message sending)
@@ -89,7 +90,9 @@ void process_input(char input[], size_t length) {
         || !memcmp(input, "m ", sizeof(char) * 2)) {
             if (strlen(input) > 2) {
                 if (USE_PRINTF) { printf("Sending payload: [%s] (%d bytes)\n", input + 2, strlen(input + 2)); }
-                radio.write(input + 2, sizeof(char) * strlen(input + 2));
+                if (!radio.write(input + 2, sizeof(char) * strlen(input + 2))) {
+                    Serial.println("Radio write error.");
+                }
             } else { Serial.println("No message payload."); }
             return ;
         }
@@ -110,7 +113,7 @@ void setup()
     Serial.setTimeout(SERIAL_TIMEOUT); // Set RW timeout to 1ms
 
     Serial.println("Initialize radio...");
-    if (radio.begin()) { // Great Success
+    if (radio.begin()) {
         radio_initialized = true;
         set_mode(mode_rx); // Init to RX by default
         Serial.println("Radio init OK");
@@ -160,8 +163,10 @@ void loop()
         process_input(input_buff, read_size);
     }
     if (!transmitter && radio.available()) {
+        Serial.println("Guerilla radio!!");
         radio.read(rx_buff, PAYLOAD_SIZE);
-        if (USE_PRINTF) { printf("Got radio: [%s]\n", rx_buff); }
+        Serial.print("Radio get: ["); Serial.print((char *)rx_buff); Serial.println("]\n");
+        // if (USE_PRINTF) { printf("Radio get: [%s]\n", rx_buff); }
         char *tok = strtok((char *)rx_buff, " ");
         if (strimatch(tok, "A")) { // Axis
             tok = strtok(NULL, " ");

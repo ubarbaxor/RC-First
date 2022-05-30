@@ -11,7 +11,6 @@ const rl = readline.createInterface({
 const server = http.createServer(app)
 
 const { Server } = require("socket.io")
-const { SocketAddress } = require('net')
 const io = new Server(server)
 
 const PORT = 8000
@@ -79,10 +78,19 @@ io.on('connection', socket => {
         })
         if (!sharingIDs.length)  {
           console.log(`Port ${ports[socket.id].serial.path} is now free.`)
-          ports[socket.id].serial.close()
+          ports[socket.id].serial && ports[socket.id].serial.close()
         }
         delete(ports[socket.id])
         return
+      }
+    } else if (ports[socket.id] && ports[socket.id].path !== path) {
+      const sharingIDs = Object.keys(ports).filter(id => {
+        if (id === socket.id) { return }
+        if (ports[id].path === path) { return true }
+      })
+      if (!sharingIDs.length) {
+        ports[id].serial.close()
+        delete(ports[id])
       }
     }
     console.log(`Port selected: ${path}`)
