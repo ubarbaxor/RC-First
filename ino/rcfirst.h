@@ -22,4 +22,10 @@ enum e_mode {
     none
 };
 
+# define INCLUDE_GUARD(def, stmt) {\
+    #ifdef def                     \
+        stmt                       \
+    #endif                         \
+}
+
 #endif
