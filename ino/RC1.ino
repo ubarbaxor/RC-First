@@ -11,7 +11,7 @@
 #define USE_PRINTF true
 #define PRINTF(format, ...) {       \
     INCLUDE_GUARD(USE_PRINTF, {     \
-        printf(format, __VA_ARGS__) \
+        printf(format, __VA_ARGS__); \
     })                              \
 }
 
