@@ -1,3 +1,5 @@
+/* global socket */
+
 let serialPorts = {}
 
 const portSelector = document.getElementById('serial-selector')
@@ -7,32 +9,33 @@ nullPort.innerText = 'None'
 nullPort.value = ''
 
 socket.on('serialPorts', ports => {
-    const selectedPort = portSelector.value
+  const selectedPort = portSelector.value
 
-    serialPorts = ports.reduce((acc, {path, friendlyName, ...attr}, i) => ({
-        ...acc,
-        [path]: { index: i, friendlyName, ...attr }
-    }), {})
+  serialPorts = ports.reduce((acc, { path, friendlyName, ...attr }, i) => ({
+    ...acc,
+    [path]: { index: i, friendlyName, ...attr },
+  }), {})
 
-    portOptions = ports.map(p => {
-        const e = document.createElement('option')
-        e.innerText = p.friendlyName
-        e.value = p.path
-        return e
-    })
-    portSelector.replaceChildren(nullPort, ...portOptions)
-    if (selectedPort in serialPorts) {
-        portSelector.value = selectedPort
-        selectPort(selectedPort)
-    }
+  const portOptions = ports.map(p => {
+    const e = document.createElement('option')
+    e.innerText = p.friendlyName
+    e.value = p.path
+    return e
+  })
+  portSelector.replaceChildren(nullPort, ...portOptions)
+  if (selectedPort in serialPorts) {
+    portSelector.value = selectedPort
+    selectPort(selectedPort)
+  }
 })
 socket.on('portSelected', port => console.log(`Selected port ${port}`))
 socket.on('portResumed', port => console.log(`Resumed port ${port}`))
 
-const queryPorts = _ => {
-    socket.emit('listPorts')
+// TODO: implement ?
+const queryPorts = _ => { // eslint-disable-line
+  socket.emit('listPorts')
 }
 
 const selectPort = port => {
-    socket.emit('selectPort', port)
+  socket.emit('selectPort', port)
 }

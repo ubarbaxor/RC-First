@@ -5,12 +5,12 @@ const app = express()
 const http = require('http')
 const readline = require('readline')
 const rl = readline.createInterface({
-  input: process.stdin
+  input: process.stdin,
 })
 
 const server = http.createServer(app)
 
-const { Server } = require("socket.io")
+const { Server } = require('socket.io')
 const io = new Server(server)
 
 const PORT = 8000
@@ -21,15 +21,13 @@ app.use(express.static('public'))
 const BAUDRATE = 115200
 const ports = {}
 const updateHandlers = {
-  throttle: ({ value }, {id}) => {
-    if (!ports[id]) { return }
-    let throttle
-
-    throttle = Math.round(255 * value)
-    const msg = `M ${value > 0 ? "A" : "a"} 0 ${throttle};`
+  throttle: ({ value }, { id }) => {
+    if (!ports[id]) return
+    const throttle = Math.round(255 * value)
+    const msg = `M ${value > 0 ? 'A' : 'a'} 0 ${throttle};`
     // console.log(msg)
     ports[id].serial.write(`${msg}`)
-  }
+  },
 }
 io.on('connection', socket => {
   const listPorts = _ => {
@@ -41,21 +39,21 @@ io.on('connection', socket => {
   console.log(`Socket ${socket.id} connected.`)
   listPorts()
 
-
   // socket.onAny(console.log)
 
   socket.on('disconnect', reason => {
     console.log(`Socket ${socket.id} disconnected (${reason})`)
-     if (ports[socket.id]) {
-
-     }
+    const serialPath = ports[socket.id]?.path
+    // TODO
+    // if (ports[socket.id]) {
+    // }
     const sharingIDs = Object.keys(ports).filter(id => {
-      if (id === socket.id) { return }
+      if (id === socket.id) return false
 
-      if (ports[id].path === path) {
-        console.log(`Socket ${socket.id} shares ${path} with ${id}`)
+      if (ports[id].path === serialPath) {
+        console.log(`Socket ${socket.id} shares ${serialPath} with ${id}`)
         return true
-      }
+      } else return false
     })
     if (ports[socket.id] && !sharingIDs.length) {
       console.log(`Cleanup port ${ports[socket.id].serial.settings.path}`)
@@ -75,22 +73,24 @@ io.on('connection', socket => {
             console.log(ports[id])
             return true
           }
+          return false
         })
-        if (!sharingIDs.length)  {
+        if (!sharingIDs.length) {
           console.log(`Port ${ports[socket.id].serial.path} is now free.`)
           ports[socket.id].serial && ports[socket.id].serial.close()
         }
-        delete(ports[socket.id])
+        delete (ports[socket.id])
         return
       }
     } else if (ports[socket.id] && ports[socket.id].path !== path) {
       const sharingIDs = Object.keys(ports).filter(id => {
-        if (id === socket.id) { return }
-        if (ports[id].path === path) { return true }
+        if (id === socket.id) return false
+        if (ports[id].path === path) return true
+        return false
       })
       if (!sharingIDs.length) {
-        ports[id].serial.close()
-        delete(ports[id])
+        ports[socket.id].serial.close()
+        delete (ports[socket.id])
       }
     }
     console.log(`Port selected: ${path}`)
@@ -102,6 +102,7 @@ io.on('connection', socket => {
           console.log(`${ports[id].path} shared with ${id}`)
           return true
         }
+        return false
       })
       const serial = sharingIDs.length
         ? sharingIDs[0].serial
@@ -111,21 +112,20 @@ io.on('connection', socket => {
             console.log(`User input: [${input}]`)
             serial.write(input)
           })
-      })
+        })
       ports[socket.id] = {
         path,
         serial,
         socket: socket.id,
       }
-      if (sharingIDs.length) {
+      if (sharingIDs.length)
         socket.emit('portResume', path)
-      } else {
+      else {
         socket.emit('portSelected', path)
         serial.pipe(process.stdout)
       }
-    } else if (ports[socket.id] && ports[socket.id].path === path) {
+    } else if (ports[socket.id] && ports[socket.id].path === path)
       socket.emit('portResume', path)
-    }
   })
 
   socket.on('padUpdates', updates => {
@@ -138,9 +138,8 @@ io.on('connection', socket => {
         : console.log(`Action not implemented: ${u.action}`)
     })
   })
-
 })
 
 server.listen(PORT, HOST, () => {
-  console.log(`listening on ${HOST}:${PORT}`);
-});
+  console.log(`listening on ${HOST}:${PORT}`)
+})
