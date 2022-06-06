@@ -16,8 +16,7 @@
 #define PIN_CSN 3
 #define PAYLOAD_SIZE 32
 
-enum e_mode
-{
+enum e_mode {
   mode_tx,
   mode_rx,
   none,
