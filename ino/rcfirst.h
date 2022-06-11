@@ -8,7 +8,7 @@
 // Serial console related stuff
 #define SERIAL_BAUDRATE 115200
 // Timeout in milliseconds
-#define SERIAL_TIMEOUT 1
+#define SERIAL_TIMEOUT 2
 #define INPUT_BUFF_SIZE 64
 
 // nRF2401 stuff
